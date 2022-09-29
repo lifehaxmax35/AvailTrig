@@ -43,6 +43,7 @@ import avail.interpreter.levelTwo.operation.L2_JUMP
 import avail.interpreter.levelTwo.operation.L2_UNREACHABLE_CODE
 import avail.interpreter.levelTwo.register.L2Register
 import avail.interpreter.levelTwo.register.L2Register.RegisterKind
+import avail.utility.Strings.newlineTab
 import avail.utility.Strings.repeated
 import avail.utility.Strings.tag
 import avail.utility.deepForEach
@@ -247,6 +248,19 @@ class L2ControlFlowGraphVisualizer constructor(
 							"color" to writer.adjust(fontcolor)
 						) {
 							append(escape(basicBlock.name()))
+						}
+						if (basicBlock.debugNote.isNotEmpty())
+						{
+							tag(
+								"font",
+								"face" to "Courier",
+								"color" to writer.adjust(commentTextColor)
+							) {
+								basicBlock.debugNote.lines().forEach { line ->
+									append("<br/>")
+									append(escape(line))
+								}
+							}
 						}
 					}
 					tag(
