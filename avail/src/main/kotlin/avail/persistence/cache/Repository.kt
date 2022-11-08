@@ -37,6 +37,7 @@ package avail.persistence.cache
 
 import avail.builder.ModuleRoot
 import avail.builder.ResolvedModuleName
+import avail.compiler.ModuleCorpus
 import avail.compiler.ModuleHeader
 import avail.compiler.ModuleManifestEntry
 import avail.descriptor.functions.A_RawFunction
@@ -44,6 +45,7 @@ import avail.descriptor.module.A_Module
 import avail.descriptor.module.ModuleDescriptor
 import avail.descriptor.representation.AvailObject.Companion.multiplier
 import avail.descriptor.tokens.CommentTokenDescriptor
+import avail.descriptor.tuples.StringDescriptor.Companion.stringFrom
 import avail.descriptor.tuples.TupleDescriptor
 import avail.error.ErrorCode
 import avail.resolver.ResolverReference
@@ -769,6 +771,14 @@ class Repository constructor(
 		private val entryPoints: MutableList<String>
 
 		/**
+		 * The [ModuleCorpus]es that this package representative defines.  Each
+		 * such corpus indicates a file pattern to find headerless modules, and
+		 * the module that should be extended implicitly by that headerless
+		 * module.
+		 */
+		private val corpora: MutableList<ModuleCorpus>
+
+		/**
 		 * The `N` most recently recorded compilations of this version of the
 		 * module.
 		 */
@@ -859,6 +869,15 @@ class Repository constructor(
 		fun getEntryPoints(): List<String> = unmodifiableList(entryPoints)
 
 		/**
+		 * The [List] of each [ModuleCorpus] declared by this version of the
+		 * module.
+		 *
+		 * @return
+		 *   The list of corpora.
+		 */
+		fun getCorpora(): List<ModuleCorpus> = unmodifiableList(corpora)
+
+		/**
 		 * Write the specified byte array (encoding a [ModuleHeader]) into the
 		 * indexed file. Record the record position for subsequent retrieval.
 		 *
@@ -913,6 +932,12 @@ class Repository constructor(
 			{
 				binaryStream.sizedString(entryPoint)
 			}
+			binaryStream.vlq(corpora.size)
+			for (corpus in corpora)
+			{
+				binaryStream.sizedString(corpus.moduleName.asNativeString())
+				binaryStream.sizedString(corpus.filePattern.asNativeString())
+			}
 			binaryStream.vlq(compilations.size)
 			for ((key, value) in compilations)
 			{
@@ -926,15 +951,15 @@ class Repository constructor(
 		override fun toString(): String =
 			String.format(
 				"Version:%n"
-					+ "\t\timports=%s%s%n"
+					+ "\t\timports=%s%s%s%n"
 					+ "\t\tcompilations=%s%n"
 					+ "\t\tmoduleHeaderRecordNumber=%d%n"
 					+ "\t\tstacksRecordNumber=%d%n",
 				localImportNames,
-				if (entryPoints.isEmpty())
-					""
-				else
-					"\n\t\tentry points=$entryPoints",
+				if (entryPoints.isEmpty()) ""
+				else "\n\t\tentry points=$entryPoints",
+				if (corpora.isEmpty()) ""
+					else "\n\t\tcorpora=$corpora",
 				compilations.values,
 				moduleHeaderRecordNumber,
 				stacksRecordNumber)
@@ -964,6 +989,14 @@ class Repository constructor(
 			{
 				entryPoints.add(binaryStream.decodeString())
 			}
+			var corporaCount = binaryStream.unvlqInt()
+			corpora = mutableListOf()
+			while (corporaCount-- > 0)
+			{
+				val moduleName = stringFrom(binaryStream.decodeString())
+				val filePattern = stringFrom(binaryStream.decodeString())
+				corpora.add(ModuleCorpus(moduleName, filePattern))
+			}
 			var compilationsCount = binaryStream.unvlqInt()
 			while (compilationsCount-- > 0)
 			{
@@ -983,15 +1016,20 @@ class Repository constructor(
 		 *   The list of module names being imported.
 		 * @param entryPoints
 		 *   The list of entry points defined in the module.
+		 * @param corpora
+		 *   The [List] of each [ModuleCorpus] defined by the module, which is
+		 *   used to support headerless modules (with a non-`.avail` extension).
 		 */
 		constructor(
 			moduleSize: Long,
 			localImportNames: List<String>,
-			entryPoints: List<String>)
+			entryPoints: List<String>,
+			corpora: List<ModuleCorpus>)
 		{
 			this.moduleSize = moduleSize
 			this.localImportNames = localImportNames.toMutableList()
 			this.entryPoints = entryPoints.toMutableList()
+			this.corpora = corpora.toMutableList()
 		}
 	}
 

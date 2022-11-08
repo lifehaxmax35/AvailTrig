@@ -1203,10 +1203,7 @@ class AvailWorkbench internal constructor(
 		parentRef.walkChildrenThen(
 			false,
 			{
-				if (it.isRoot)
-				{
-					return@walkChildrenThen
-				}
+				if (it.isRoot) return@walkChildrenThen
 				val parentNode = parentMap[it.parentName]
 					?: return@walkChildrenThen
 				if (it.type == ResourceType.MODULE)

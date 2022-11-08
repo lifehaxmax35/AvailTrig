@@ -255,8 +255,12 @@ internal class BuildTracer constructor(val availBuilder: AvailBuilder)
 							val header = compiler.compilationContext.moduleHeader!!
 							val importNames = header.importedModuleNames
 							val entryPoints = header.entryPointNames
+							val corpora = header.corpora
 							val newVersion = repository.ModuleVersion(
-								sourceFile.size, importNames, entryPoints)
+								sourceFile.size,
+								importNames,
+								entryPoints,
+								corpora)
 							availBuilder.serialize(header, newVersion)
 							archive.putVersion(versionKey, newVersion)
 							traceModuleNames(
